@@ -1,0 +1,31 @@
+{
+  "name": "ckd-classifier",
+  "version": "1",
+  "run_id": "282d8a49165d4e86ae13360d5896c9da",
+  "features": [
+    "age",
+    "bp",
+    "sg",
+    "al",
+    "su",
+    "rbc",
+    "pc",
+    "pcc",
+    "ba",
+    "bgr",
+    "bu",
+    "sc",
+    "sod",
+    "pot",
+    "hemo",
+    "pcv",
+    "wbcc",
+    "rbcc",
+    "htn",
+    "dm",
+    "cad",
+    "appet",
+    "pe",
+    "ane"
+  ]
+}

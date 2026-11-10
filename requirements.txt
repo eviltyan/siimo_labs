@@ -1,0 +1,7 @@
+mlflow==2.10.0
+scikit-learn==1.7.2
+pandas==2.3.3
+numpy==1.26.4
+fastapi==0.162.2
+uvicorn==0.54.0
+scipy==1.15.3

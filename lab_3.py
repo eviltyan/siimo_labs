@@ -123,9 +123,9 @@ print(f"RobustScaler max(Ba): {X_robust_df['Ba'].max():.2f}")
 
 # Группа 1
 group1 = ['RI', 'Na', 'Mg']
-sns.pairplot(X_robust_df[group1], 
-             diag_kind='hist', 
-             corner=True, 
+sns.pairplot(X_robust_df[group1],
+             diag_kind='hist',
+             corner=True,
              plot_kws={'alpha': 0.6, 's': 40, 'edgecolor': 'k', 'linewidth': 0.3},
              diag_kws={'bins': 15, 'edgecolor': 'black'})
 plt.suptitle('Группа 1: RI, Na, Mg (Оптические свойства и легкие металлы)', y=1.02, fontsize=14)
@@ -133,9 +133,9 @@ plt.show()
 
 # Группа 2
 group2 = ['Al', 'Si', 'K']
-sns.pairplot(X_robust_df[group2], 
-             diag_kind='hist', 
-             corner=True, 
+sns.pairplot(X_robust_df[group2],
+             diag_kind='hist',
+             corner=True,
              plot_kws={'alpha': 0.6, 's': 40, 'edgecolor': 'k', 'linewidth': 0.3},
              diag_kws={'bins': 15, 'edgecolor': 'black'})
 plt.suptitle('Группа 2: Al, Si, K (Основные компоненты стекла)', y=1.02, fontsize=14)
@@ -143,9 +143,9 @@ plt.show()
 
 # Группа 3
 group3 = ['Ca', 'Ba', 'Fe']
-sns.pairplot(X_robust_df[group3], 
-             diag_kind='hist', 
-             corner=True, 
+sns.pairplot(X_robust_df[group3],
+             diag_kind='hist',
+             corner=True,
              plot_kws={'alpha': 0.6, 's': 40, 'edgecolor': 'k', 'linewidth': 0.3},
              diag_kws={'bins': 15, 'edgecolor': 'black'})
 plt.suptitle('Группа 3: Ca, Ba, Fe (Тяжелые металлы и примеси)', y=1.02, fontsize=14)
@@ -160,7 +160,7 @@ for k in k_range:
     # n_init=10 для избежания локальных минимумов, как указано в методичке
     kmeans = KMeans(n_clusters=k, n_init=10, random_state=42)
     labels = kmeans.fit_predict(X_robust)
-    
+
     inertias.append(kmeans.inertia_)
     silhouettes.append(silhouette_score(X_robust, labels))
 
@@ -194,7 +194,7 @@ for k, inertia, sil in zip(k_range, inertias, silhouettes):
 plt.figure(figsize=(15, 6))
 # Используем метод Ward, который минимизирует внутрикластерную дисперсию
 linkage_matrix = linkage(X_robust, method='ward')
-dendrogram(linkage_matrix, truncate_mode='lastp', p=30, 
+dendrogram(linkage_matrix, truncate_mode='lastp', p=30,
            leaf_rotation=90, leaf_font_size=10, show_contracted=True)
 plt.title('Дендрограмма (метод Ward)')
 plt.xlabel('Индекс объекта (или размер кластера)')
@@ -224,11 +224,33 @@ def get_metrics(X, labels, y_true, name):
 
 results = pd.DataFrame([
     get_metrics(X_robust, labels_km, y_true, 'K-means (k=6)'),
-    get_metrics(X_robust, labels_agg, y_true, 'Иерархическая (Ward)')
+    get_metrics(X_robust, labels_agg, y_true, 'Иерархическая (Ward, k=6)')
 ])
 
-print("Сравнительная таблица метрик:")
+print("Сравнительная таблица метрик (k=6):")
 display(results.round(4))
+
+from sklearn.mixture import GaussianMixture
+
+# 1. Обучаем модели при k=4 (основной результат)
+kmeans_4 = KMeans(n_clusters=4, n_init=10, random_state=42)
+labels_km_4 = kmeans_4.fit_predict(X_robust)
+
+agg_4 = AgglomerativeClustering(n_clusters=4, linkage='ward')
+labels_agg_4 = agg_4.fit_predict(X_robust)
+
+gmm_4 = GaussianMixture(n_components=4, random_state=42)
+labels_gmm_4 = gmm_4.fit_predict(X_robust)
+
+# 2. Собираем метрики для трех методов при k=4
+results_k4 = pd.DataFrame([
+    get_metrics(X_robust, labels_km_4, y_true, 'K-means (k=4)'),
+    get_metrics(X_robust, labels_agg_4, y_true, 'Иерархическая (Ward, k=4)'),
+    get_metrics(X_robust, labels_gmm_4, y_true, 'EM-алгоритм (GMM, k=4)')
+])
+
+print("Сравнительная таблица метрик (k=4):")
+display(results_k4.round(4))
 
 k_range = range(2, 11)
 metrics_k = {'k': [], 'Silhouette': [], 'Calinski-Harabasz': [], 'Davies-Bouldin': []}
@@ -266,21 +288,6 @@ axes[2].grid(True)
 
 plt.tight_layout()
 plt.show()
-
-# Проверим метрики при k=4 (оптимум по силуэту)
-kmeans_4 = KMeans(n_clusters=4, n_init=10, random_state=42)
-labels_km_4 = kmeans_4.fit_predict(X_robust)
-
-agg_4 = AgglomerativeClustering(n_clusters=4, linkage='ward')
-labels_agg_4 = agg_4.fit_predict(X_robust)
-
-results_k4 = pd.DataFrame([
-    get_metrics(X_robust, labels_km_4, y_true, 'K-means (k=4)'),
-    get_metrics(X_robust, labels_agg_4, y_true, 'Иерархическая (k=4)')
-])
-
-print("Метрики при k=4 (оптимум по силуэту):")
-display(results_k4.round(4))
 
 from sklearn.mixture import GaussianMixture
 
@@ -322,8 +329,8 @@ plt.show()
 
 # Вывод дисперсии
 print()
-print(f"Дисперсия PC1: {pca_3d.explained_variance_ratio_[0]:.2%}")
-print(f"Дисперсия PC2: {pca_3d.explained_variance_ratio_[1]:.2%}")
+print(f"Дисперсия PC1: {pca_2d.explained_variance_ratio_[0]:.2%}")
+print(f"Дисперсия PC2: {pca_2d.explained_variance_ratio_[1]:.2%}")
 print(f"Суммарно три компоненты объясняют: {sum(pca_2d.explained_variance_ratio_[:2]):.2%} данных")
 
 # 5. Строим 3D-график для K-means
@@ -355,12 +362,12 @@ fig = plt.figure(figsize=(10, 8))
 ax = fig.add_subplot(111, projection='3d')
 
 # Делаем точки более прозрачными (alpha=0.4), чтобы центры просвечивали
-ax.scatter(X_pca_3d[:, 0], X_pca_3d[:, 1], X_pca_3d[:, 2], 
+ax.scatter(X_pca_3d[:, 0], X_pca_3d[:, 1], X_pca_3d[:, 2],
            c=labels_km, cmap='tab10', alpha=0.4, edgecolor='none', s=30, zorder=1)
 
 # Центры: огромный размер (s=400), белая обводка (edgecolor='white', linewidth=2) и черная заливка
-ax.scatter(centers_km_3d[:, 0], centers_km_3d[:, 1], centers_km_3d[:, 2], 
-           c='black', marker='X', s=400, edgecolor='white', linewidth=2, 
+ax.scatter(centers_km_3d[:, 0], centers_km_3d[:, 1], centers_km_3d[:, 2],
+           c='black', marker='X', s=400, edgecolor='white', linewidth=2,
            label='Центры', zorder=10)
 
 ax.set_title('3D визуализация K-means (PC1, PC2, PC3)')
@@ -394,28 +401,124 @@ fig.add_scatter3d(
 
 fig.show()
 
-# Возвращаем центры кластеров к исходному масштабу (в проценты химического состава)
-centers_km = scaler_robust.inverse_transform(kmeans.cluster_centers_)
-centers_df = pd.DataFrame(centers_km, columns=X_raw.columns)
+# Для 2D-графика используем PCA на 2 компоненты (если не сделано ранее)
+from sklearn.decomposition import PCA
+pca_2d = PCA(n_components=2, random_state=42)
+X_pca_2d = pca_2d.fit_transform(X_robust)
+
+# Получаем центры K-means в 2D
+centers_km_2d = pca_2d.transform(kmeans_4.cluster_centers_)
+
+# Строим график K-means
+plt.figure(figsize=(8, 6))
+plt.scatter(X_pca_2d[:, 0], X_pca_2d[:, 1], c=labels_km_4, cmap='Set1', 
+            alpha=0.9, edgecolor='black', linewidth=0.6, s=60)
+plt.scatter(centers_km_2d[:, 0], centers_km_2d[:, 1], c='black', marker='X', 
+            s=250, label='Центры', edgecolor='white', linewidth=1.5)
+
+plt.title('K-means (k=4) — Оптимум по силуэту', fontsize=14)
+plt.xlabel('Главная компонента 1 (PC1)', fontsize=12)
+plt.ylabel('Главная компонента 2 (PC2)', fontsize=12)
+plt.legend(fontsize=11)
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.tight_layout()
+plt.show()
+
+import numpy as np
+
+# Считаем центроиды для Ward вручную (у AgglomerativeClustering нет атрибута cluster_centers_)
+centers_agg_raw = np.array([X_robust[labels_agg_4 == i].mean(axis=0) for i in range(4)])
+centers_agg_2d = pca_2d.transform(centers_agg_raw)
+
+# Строим график Ward
+plt.figure(figsize=(8, 6))
+plt.scatter(X_pca_2d[:, 0], X_pca_2d[:, 1], c=labels_agg_4, cmap='Set1', 
+            alpha=0.9, edgecolor='black', linewidth=0.6, s=60)
+plt.scatter(centers_agg_2d[:, 0], centers_agg_2d[:, 1], c='black', marker='X', 
+            s=250, label='Центры', edgecolor='white', linewidth=1.5)
+
+plt.title('Иерархическая кластеризация (Ward, k=4)', fontsize=14)
+plt.xlabel('Главная компонента 1 (PC1)', fontsize=12)
+plt.ylabel('Главная компонента 2 (PC2)', fontsize=12)
+plt.legend(fontsize=11)
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.tight_layout()
+plt.show()
+
+# Получаем центры GMM в 2D
+centers_gmm_2d = pca_2d.transform(gmm_4.means_)
+
+# Строим график GMM
+plt.figure(figsize=(8, 6))
+plt.scatter(X_pca_2d[:, 0], X_pca_2d[:, 1], c=labels_gmm_4, cmap='Set1', 
+            alpha=0.9, edgecolor='black', linewidth=0.6, s=60)
+plt.scatter(centers_gmm_2d[:, 0], centers_gmm_2d[:, 1], c='black', marker='X', 
+            s=250, label='Центры', edgecolor='white', linewidth=1.5)
+
+plt.title('EM-алгоритм (Gaussian Mixture, k=4)', fontsize=14)
+plt.xlabel('Главная компонента 1 (PC1)', fontsize=12)
+plt.ylabel('Главная компонента 2 (PC2)', fontsize=12)
+plt.legend(fontsize=11)
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.tight_layout()
+plt.show()
+
+from scipy.spatial.distance import cdist
+
+def analyze_cluster_distances(X, labels, centers, method_name):
+    # 1. Внутрикластерные расстояния (компактность)
+    intra_distances = []
+    for i in range(len(centers)):
+        cluster_points = X[labels == i]
+        if len(cluster_points) > 0:
+            dist = np.mean(np.linalg.norm(cluster_points - centers[i], axis=1))
+            intra_distances.append(dist)
+    
+    avg_intra = np.mean(intra_distances)
+    
+    # 2. Межкластерные расстояния (разделимость)
+    inter_dist_matrix = cdist(centers, centers, metric='euclidean')
+    mask = ~np.eye(inter_dist_matrix.shape[0], dtype=bool)
+    avg_inter = np.mean(inter_dist_matrix[mask])
+    
+    # 3. Отношение (чем больше, тем лучше)
+    separation_ratio = avg_inter / avg_intra if avg_intra > 0 else 0
+    
+    print(f"--- {method_name} ---")
+    print(f"Среднее внутрикластерное расстояние (компактность): {avg_intra:.3f}")
+    print(f"Среднее межкластерное расстояние (разделимость): {avg_inter:.3f}")
+    print(f"Отношение межкластерного к внутрикластерному: {separation_ratio:.3f}")
+    print("\nМатрица расстояний между центрами:")
+    print(pd.DataFrame(inter_dist_matrix.round(2), 
+                       columns=[f'Кластер {i}' for i in range(len(centers))],
+                       index=[f'Кластер {i}' for i in range(len(centers))]))
+    return avg_intra, avg_inter, separation_ratio
+
+# Считаем для K-means (k=4)
+print("АНАЛИЗ РАССТОЯНИЙ ДЛЯ K-MEANS (k=4)")
+km_intra, km_inter, km_ratio = analyze_cluster_distances(
+    X_robust, labels_km_4, kmeans_4.cluster_centers_, "K-means (k=4)"
+)
+
+# Считаем для Иерархической (Ward)
+print("\n\nАНАЛИЗ РАССТОЯНИЙ ДЛЯ WARD (k=4)")
+centers_agg = np.array([X_robust[labels_agg_4 == i].mean(axis=0) for i in range(4)])
+agg_intra, agg_inter, agg_ratio = analyze_cluster_distances(
+    X_robust, labels_agg_4, centers_agg, "Иерархическая (Ward, k=4)"
+)
+
+# Возвращаем центры кластеров K-means (k=4) к исходному масштабу
+centers_km_4 = scaler_robust.inverse_transform(kmeans_4.cluster_centers_)
+centers_df_4 = pd.DataFrame(centers_km_4, columns=X_raw.columns)
 
 # Добавляем информацию о размере кластера
-centers_df['Размер кластера'] = pd.Series(labels_km).value_counts().sort_index()
+centers_df_4['Размер кластера'] = pd.Series(labels_km_4).value_counts().sort_index()
 
-print("Центры кластеров K-means (в исходных единицах, вес. %):")
-display(centers_df.round(2))
+print("Центры кластеров K-means (k=4, в исходных единицах, вес. %):")
+display(centers_df_4.round(2))
 
-# Для удобства интерпретации посмотрим, какие реальные типы стекла попали в каждый кластер
-print("\nСоответствие кластеров и реальных типов стекла (K-means):")
-crosstab = pd.crosstab(labels_km, y_true)
-crosstab.columns = ['Тип 1', 'Тип 2', 'Тип 3', 'Тип 5', 'Тип 6', 'Тип 7']
-display(crosstab)
-
-# Считаем, насколько сильно различаются разбиения, полученные K-means и Иерархической кластеризацией
-ari_between_methods = adjusted_rand_score(labels_km, labels_agg)
-print(f"ARI между K-means и Иерархической кластеризацией: {ari_between_methods:.4f}")
-
-# Выводим таблицу кросс-табуляции для иерархической кластеризации, чтобы сравнить
-print("\nСоответствие кластеров и реальных типов стекла (Ward):")
-crosstab_agg = pd.crosstab(labels_agg, y_true)
-crosstab_agg.columns = ['Тип 1', 'Тип 2', 'Тип 3', 'Тип 5', 'Тип 6', 'Тип 7']
-display(crosstab_agg)
+# Кросс-табуляция с реальными типами
+print("\nСоответствие кластеров и реальных типов стекла (K-means, k=4):")
+crosstab_4 = pd.crosstab(labels_km_4, y_true)
+crosstab_4.columns = ['Тип 1', 'Тип 2', 'Тип 3', 'Тип 5', 'Тип 6', 'Тип 7']
+display(crosstab_4)
